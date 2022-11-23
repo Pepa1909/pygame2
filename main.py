@@ -71,6 +71,7 @@ class Player(pygame.sprite.Sprite):
         self.hit = False
         self.hit_count = 0
         self.invincible = 0
+        self.hp = 5
 
     def jump(self):
         self.y_vel = -self.GRAVITY * 8
@@ -83,13 +84,13 @@ class Player(pygame.sprite.Sprite):
         self.rect.x += dx
         self.rect.y += dy
 
-    def makehit(self,hp):
+    def makehit(self):
         self.hit = True
         self.hit_count = 0
         if self.invincible == 0: 
-            hp -= 1
-            self.invincible = FPS
-        return hp
+            self.hp -= 1
+            self.invincible = FPS*2
+
 
     def move_left(self, vel):
         self.x_vel = -vel
@@ -146,7 +147,6 @@ class Player(pygame.sprite.Sprite):
         sprite_index = (self.animation_count // self.ANIMATION_DELAY) % len(sprites)
         self.sprite = sprites[sprite_index]
         self.animation_count += 1
-        # if sprite_sheet == "hit":
         self.update()
 
 
@@ -215,7 +215,7 @@ def get_background(name):
             tiles.append(pos)
     return tiles, image
 
-def draw(window, background, bg_image, player, objects, offset_x, hp):
+def draw(window, background, bg_image, player, objects, offset_x):
     for tile in background:
         window.blit(bg_image, tile)
 
@@ -223,12 +223,11 @@ def draw(window, background, bg_image, player, objects, offset_x, hp):
     for obj in objects:
         obj.draw(window, offset_x)
     
-    health_text = HEATLH_FONT.render("HP: " + str(hp), 1, RED)
+    health_text = HEATLH_FONT.render("HP: " + str(player.hp), 1, RED)
     window.blit(health_text, (WIDTH - health_text.get_width()- 20, 20))
     player.draw(window, offset_x)
 
     pygame.display.update()
-    return hp
 
 def handle_vertical_collision(player, objects, dy):
     collided_objects=[]
@@ -258,7 +257,7 @@ def collide(player, objects, dx):
     return collided_object
 
 
-def handle_move(player, objects, hp ):
+def handle_move(player, objects):
     player.x_vel = 0
     collide_left = collide(player, objects, -PLAYER_VEL * 2)
     collide_right = collide(player, objects, PLAYER_VEL * 2)
@@ -272,8 +271,7 @@ def handle_move(player, objects, hp ):
     to_check = [collide_left, collide_right, *vertical_collide]
     for obj in to_check:
         if obj and obj.name == "fire":
-            hp = player.makehit(hp)
-    return hp
+            player.makehit()
 
 def death(win):
     text = HEATLH_FONT.render("You died!", 1, RED)
@@ -286,7 +284,6 @@ def main(window):
     background, bg_image = get_background("Gray.png")
 
     block_size = 96
-    hp = 5
 
     player = Player(100,100,50,50)
     fire  = Fire(100, HEIGHT-block_size -64, 16,32)
@@ -313,11 +310,11 @@ def main(window):
 
         player.loop(FPS)
         fire.loop()
-        hp = handle_move(player, objects, hp)
-        hp = draw(window, background, bg_image, player, objects, offset_x, hp)
+        handle_move(player, objects)
+        draw(window, background, bg_image, player, objects, offset_x)
         if ((player.rect.right - offset_x >= WIDTH - scroll_area_width) and player.x_vel > 0) or ((player.rect.left - offset_x <= scroll_area_width) and player.x_vel < 0):
             offset_x += player.x_vel
-        if hp < 1:
+        if player.hp < 1:
             death(window)
             main(window)
     pygame.quit()
