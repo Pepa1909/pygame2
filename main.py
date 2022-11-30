@@ -54,7 +54,6 @@ def get_block(size):
 
 
 class Player(pygame.sprite.Sprite):
-    COLOR = (255, 0, 0)
     GRAVITY = 1
     SPRITES = load_sprite_sheets("MainCharacters", "PinkMan", 32, 32, True)
     ANIMATION_DELAY = 3
@@ -72,6 +71,7 @@ class Player(pygame.sprite.Sprite):
         self.hit_count = 0
         self.invincible = 0
         self.hp = 5
+        self.jump_count = 0
 
     def jump(self):
         self.y_vel = -self.GRAVITY * 8
@@ -90,7 +90,6 @@ class Player(pygame.sprite.Sprite):
         if self.invincible == 0: 
             self.hp -= 1
             self.invincible = FPS*2
-
 
     def move_left(self, vel):
         self.x_vel = -vel
@@ -127,13 +126,13 @@ class Player(pygame.sprite.Sprite):
     
     def hit_head(self):
         self.fall_count = 0
-        self.y_vel *= -1
+        self.y_vel = 2
 
     def update_sprite(self):
         sprite_sheet = "idle"
         if self.hit:
             sprite_sheet = "hit"
-        if self.y_vel < 0:
+        elif self.y_vel < 0:
             if self.jump_count ==1:
                 sprite_sheet = "jump"
             elif self.jump_count == 2:
@@ -259,8 +258,8 @@ def collide(player, objects, dx):
 
 def handle_move(player, objects):
     player.x_vel = 0
-    collide_left = collide(player, objects, -PLAYER_VEL * 2)
-    collide_right = collide(player, objects, PLAYER_VEL * 2)
+    collide_left = collide(player, objects, -PLAYER_VEL *3)
+    collide_right = collide(player, objects, PLAYER_VEL *3)
     keys = pygame.key.get_pressed()
     if keys[pygame.K_LEFT] and not collide_left:
         player.move_left(PLAYER_VEL)
@@ -270,27 +269,28 @@ def handle_move(player, objects):
     vertical_collide = handle_vertical_collision(player,objects, player.y_vel)
     to_check = [collide_left, collide_right, *vertical_collide]
     for obj in to_check:
-        if obj and obj.name == "fire":
+        if obj and obj.name == "fire" and obj.animation_name == "on":
             player.makehit()
 
 def death(win):
     text = HEATLH_FONT.render("You died!", 1, RED)
     win.blit(text, (WIDTH//2-text.get_width()//2, HEIGHT//2 - text.get_height()//2))
     pygame.display.update()
-    pygame.time.delay(3000)
+    pygame.time.delay(1000)
 
 def main(window):
     clock = pygame.time.Clock()
-    background, bg_image = get_background("Gray.png")
+    background, bg_image = get_background("Gray.png")         
 
     block_size = 96
 
-    player = Player(100,100,50,50)
-    fire  = Fire(100, HEIGHT-block_size -64, 16,32)
-    fire.on()
+    player = Player(300,200,50,50)
+    fire1 = Fire(0-32, HEIGHT-block_size -64, 16,32)
+    fire2 = Fire(100,HEIGHT-block_size-64, 16, 32)
+    fire1.on()
     floor = [Block(i * block_size, HEIGHT - block_size, block_size)for i in range (-WIDTH//block_size, WIDTH*2//block_size)]
 
-    objects = [*floor, Block(0, HEIGHT - block_size * 2, block_size),Block(block_size*3, HEIGHT - block_size * 4, block_size), fire]
+    objects = [*floor, Block(0, HEIGHT - block_size * 2, block_size),Block(block_size*3, HEIGHT - block_size * 4, block_size), fire1, fire2]
 
     offset_x = 0
     scroll_area_width = 200
@@ -307,14 +307,19 @@ def main(window):
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE and player.jump_count < 2:
                     player.jump()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    quit()
 
         player.loop(FPS)
-        fire.loop()
+        fire1.loop()
+        fire2.loop()
         handle_move(player, objects)
         draw(window, background, bg_image, player, objects, offset_x)
         if ((player.rect.right - offset_x >= WIDTH - scroll_area_width) and player.x_vel > 0) or ((player.rect.left - offset_x <= scroll_area_width) and player.x_vel < 0):
             offset_x += player.x_vel
-        if player.hp < 1:
+        if player.hp < 1 or player.rect.bottom >= HEIGHT:
             death(window)
             main(window)
     pygame.quit()
