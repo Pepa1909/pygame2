@@ -204,7 +204,7 @@ class Fire(Object):
             self.animation_count = 0
 
 def get_background(name):
-    image = pygame.image.load(join("assets", "Background", name))
+    image = pygame.image.load(join("assets", "Background", name)).convert_alpha()
     _, _, width, height = image.get_rect()
     tiles = []
 
